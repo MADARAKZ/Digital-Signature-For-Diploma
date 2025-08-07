@@ -47,29 +47,9 @@ Automates the complete DevLake workflow:
 - **Telegram Integration**: Alerts only for failures and critical errors, no success notifications
 - **Modular Architecture**: Clean separation of concerns across modules
 
-## Usage
-
-### 1. Automation (Run once to setup projects)
-
-```bash
-pip install -r requirements.txt
-export API_BASE_URL=http://localhost:8080  
-export TELEGRAM_BOT_TOKEN=your_bot_token
-export TELEGRAM_CHAT_ID=your_chat_id
-python manage_projects.py
-```
-
-### 2. Monitoring (Run until all blueprints complete)
-
-```bash
-python blueprint_monitor.py
-```
-
-*Note: Monitoring will automatically exit when all blueprints are finished*
 
 
-
-## 3. Code Structure
+##  Code Structure
 
 ### Entry Points
 - **manage_projects.py**: Main entry point for project management workflow. Orchestrates project/blueprint creation and updates blueprint time windows.
@@ -92,6 +72,7 @@ python blueprint_monitor.py
 
 ### Configuration
 - **config.py**: Centralized configuration management with environment variable validation.
+
 
 
 

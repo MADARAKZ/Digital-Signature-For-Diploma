@@ -1,79 +1,141 @@
-# DevLake Automation & Monitoring
+# DevLake Automation & Monitoring System
 
-Automated DevLake project creation and blueprint monitoring with intelligent failure detection.
+A comprehensive production-ready system for automating DevLake project management and monitoring blueprint execution with Prometheus metrics and intelligent failure detection.
 
-## Purpose
+## 🎯 Purpose
 
-Automates the complete DevLake workflow:
+This system provides complete automation for DevLake data collection workflows:
 
-- **Plugin & Connection Discovery**: Automatically scans all configured DevLake plugins and connections
-- **Repository Synchronization**: Syncs repositories from remote sources (GitHub, GitLab, Bitbucket, Jira, Azure)
-- **Project & Blueprint Creation**: Creates DevLake projects and scope configs for each repository  
-- **Data Collection Orchestration**: Runs data collection for each project with intelligent retry logic
-- **Real-time Monitoring**: Monitors blueprint status and sends failure alerts via Telegram
+- **🔍 Plugin & Connection Discovery**: Automatically discovers all configured DevLake plugins and connections
+- **🔄 Repository Synchronization**: Syncs repositories from remote sources (GitHub, GitLab, Bitbucket, Jira, Azure DevOps)
+- **🏗️ Project & Blueprint Creation**: Creates DevLake projects and scope configurations for each repository
+- **📊 Data Collection Orchestration**: Manages data collection pipelines with intelligent retry logic
+- **👁️ Real-time Monitoring**: Continuously monitors blueprint status with Prometheus metrics
+- **🚨 Smart Alerting**: Detects failures and exposes metrics (no notification spam)
 
-## Workflow Overview
+## 📋 Workflow Overview
 
-### 1. Automation Process (`python manage_projects.py`)
-1. **Discovery**: Scans all configured plugins and connections
-2. **Repository Sync**: Automatically syncs new repositories from remote sources (GitHub, GitLab, etc.)  
-3. **Configuration**: Creates scope configs for repository connections
-4. **Project Creation**: Creates DevLake projects and blueprints for each repository
-5. **Time Update**: Updates blueprint timeAfter values to previous Saturday
+### 1. Automation Process (Daily Daemon)
+The `manage_projects.py` daemon runs daily at 6PM Vietnam time:
 
-### 2. Monitoring Process (`python blueprint_monitor.py`)
-1. **Status Check**: Monitors blueprint pipeline status at configurable intervals
-2. **Failure Detection**: Identifies failed data collection jobs
-3. **Alerting**: Sends Telegram notifications for failures only
-4. **Auto-Completion**: Automatically exits when all blueprints are finished (no more running/pending)
+1. **🔍 Discovery**: Scans all DevLake plugins and their connections
+2. **📥 Repository Sync**: Syncs new repositories from remote sources  
+3. **⚙️ Configuration**: Creates scope configs for all repository connections
+4. **🏗️ Project Creation**: Creates individual DevLake projects for each repository
+5. **📅 Time Management**: Updates blueprint `timeAfter` values to previous Saturday
 
-## Key Features
+### 2. Monitoring Process (Continuous Daemon)  
+The `blueprint_monitor.py` daemon runs continuously:
 
-- **Automatic Discovery**: No manual configuration - scans all plugins and connections automatically
-- **Remote Repository Sync**: Auto-adds new repos from GitHub/GitLab/Bitbucket/Azure/Jira
-- **Smart Project Creation**: Each repository gets its own project and blueprint
-- **Production Ready**: Robust error handling, retry mechanisms, comprehensive logging  
-- **Smart Monitoring**: Automatically exits when all blueprints complete, only alerts on failures
-- **Pagination Support**: Handles large repository sets efficiently
-- **Flexible Deployment**: Run standalone, Docker, or Kubernetes Job
-- **Modular Architecture**: Clean separation of concerns with organized code structure
+1. **👁️ Status Monitoring**: Checks blueprint pipeline status every 5 minutes
+2. **❌ Failure Detection**: Identifies failed data collection jobs
+3. **📊 Metrics Creation**: Updates Prometheus metrics for failures
+4. **🔄 Continuous Operation**: Runs forever as a monitoring daemon
 
-## Production Features
+## 🏗️ Architecture
 
-- **Centralized Configuration**: All settings managed via environment variables
-- **Robust Logging**: Structured logging with configurable levels and timezone support
-- **Comprehensive Error Handling**: Graceful failure handling with retry mechanisms
-- **API Rate Limiting**: Smart handling of API limits and timeouts
-- **Telegram Integration**: Alerts only for failures and critical errors, no success notifications
-- **Modular Architecture**: Clean separation of concerns across modules
+```
+                      ┌─────────────────────┐    ┌─────────────────────┐
+                      │   manage_projects   │    │  blueprint_monitor  │
+                      │   (Daily Daemon)    │    │ (Continuous Daemon) │
+                      └──────────┬──────────┘    └──────────┬──────────┘
+                                 │                          │
+                                 ▼                          ▼
+                      ┌─────────────────────────────────────────────────┐
+                      │              Core Modules                       │
+                      ├─────────────────────────────────────────────────┤
+                      │ • orchestrator.py  - Workflow orchestration     │
+                      │ • api.py          - DevLake API client          │
+                      │ • projects.py     - Project/blueprint creation  │
+                      │ • connection.py   - Connection management       │
+                      │ • scopes.py       - Repository scope handling   │
+                      │ • monitoring.py   - Prometheus metrics          │
+                      └─────────────────────────────────────────────────┘
+                                              │
+                                              ▼
+                      ┌─────────────────────────────────────────────────┐
+                      │                DevLake API                      │
+                      │        (Projects, Blueprints, Pipelines)        │
+                      └─────────────────────────────────────────────────┘
+```
 
+## 📊 Monitoring & Metrics
 
+### Prometheus Metrics Server
+- **Endpoint**: `http://localhost:9100/metrics`
+- **Metrics**: Custom DevLake blueprint failure counters
+- **Labels**: `project_name`, `time_failed`
 
-##  Code Structure
+### Example Metrics Output
+```prometheus
+# HELP devlake_blueprint_failure_total Count of failed blueprint executions
+# TYPE devlake_blueprint_failure_total counter
+devlake_blueprint_failure_total{project_name="github/my-repo",time_failed="2025-08-08 14:06:06"} 1.0
+```
+
+### Health Checks
+```bash
+# Check monitoring daemon status
+curl http://localhost:9100/metrics | grep devlake_blueprint
+
+# View container logs
+docker logs devlake-automation
+
+# Check running processes
+docker exec devlake-automation ps aux
+```
+
+## 🔍 Code Structure
 
 ### Entry Points
-- **manage_projects.py**: Main entry point for project management workflow. Orchestrates project/blueprint creation and updates blueprint time windows.
-- **blueprint_monitor.py**: Entry point for monitoring blueprint status. Automatically exits when all blueprints are finished, only sends failure alerts.
+- **`manage_projects.py`**: Daily automation daemon (6PM Vietnam time)
+- **`blueprint_monitor.py`**: Continuous monitoring daemon
 
 ### Core Modules (`modules/`)
-- **orchestrator.py**: High-level orchestration logic. Coordinates the entire workflow of syncing repos, creating configs, and projects across all plugins/connections.
-- **api.py**: DevLake API client functions. Handles fetching plugins, connections, projects, and blueprints from the API.
-- **projects.py**: Project and blueprint creation logic. Creates individual projects and blueprints for repositories with webhook integration.
-- **connection.py**: Connection management. Handles scope configurations, repository syncing, and connection setup.
-- **scopes.py**: Repository/scope management. Manages DevLake scopes, remote groups, and filtering for supported plugins.
-- **webhooks.py**: Webhook connection management. Handles creation and retrieval of webhook connections.
-- **monitoring.py**: Blueprint monitoring and alerting. Checks pipeline status, detects failures, sends Telegram alerts for failures only, and automatically exits when all work is complete.
+- **`orchestrator.py`**: Main workflow orchestration and plugin processing
+- **`api.py`**: DevLake REST API client with error handling
+- **`projects.py`**: Project and blueprint creation logic
+- **`connection.py`**: Connection management and scope configuration
+- **`scopes.py`**: Repository scope management and remote synchronization
+- **`monitoring.py`**: Blueprint monitoring with Prometheus metrics integration
 
 ### Utilities (`utils/`)
-- **http.py**: HTTP client utilities with retry mechanisms and response validation.
-- **logging.py**: Logging configuration and setup utilities.  
-- **datetime.py**: Date/time utilities including timezone handling and Saturday calculations.
-- **blueprints.py**: Blueprint time management utilities for updating timeAfter values.
+- **`http.py`**: HTTP client with retry mechanisms and response validation
+- **`logging.py`**: Structured logging configuration with timezone support
+- **`datetime.py`**: Date/time utilities and timezone handling
+- **`blueprints.py`**: Blueprint time management and Saturday calculations
 
 ### Configuration
-- **config.py**: Centralized configuration management with environment variable validation.
+- **`config.py`**: Centralized environment variable configuration management
 
+## 🔄 Supported Platforms
 
+### Source Code Management
+- **GitHub**: Public and private repositories
+- **GitLab**: Self-hosted and cloud instances  
+- **Bitbucket**: Cloud and server versions
+- **Azure DevOps**: Git repositories
 
+### CI/CD Systems
+- **Jenkins**: Job and build monitoring
+- **CircleCI**: Pipeline execution tracking
+- **Bamboo**: Build plan monitoring
 
+### Issue Tracking
+- **Jira**: Issue and project synchronization
 
+## ⚡ Performance Features
+
+- **Smart Repository Sync**: Only syncs new repositories, skips existing ones
+- **Batch Processing**: Processes multiple repositories efficiently
+- **Rate Limiting**: Respects API limits with automatic delays
+- **Memory Efficient**: Streams large datasets without loading everything in memory
+- **Failure Resilience**: Continues processing even if individual repositories fail
+
+## 🚨 Error Handling
+
+- **Graceful Failures**: Individual repository failures don't stop the entire process
+- **Retry Mechanisms**: Automatic retries with exponential backoff
+- **Comprehensive Logging**: Detailed logs for troubleshooting
+- **API Error Handling**: Proper HTTP status code and response validation
+- **Prometheus Metrics**: Failure tracking via metrics instead of noisy alerts
